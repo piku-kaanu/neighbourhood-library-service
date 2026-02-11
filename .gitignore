@@ -1,0 +1,106 @@
+############################################
+# Python
+############################################
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+# Distribution / packaging
+.Python
+build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+pytest_cache/
+*.cover
+*.py,cover
+
+# Type checker
+.mypy_cache/
+.pyre/
+
+############################################
+# Environment variables
+############################################
+.env
+.env.*
+!.env.example
+
+############################################
+# Alembic
+############################################
+# Keep migration versions tracked
+# Do NOT ignore alembic/versions/
+
+############################################
+# Logs
+############################################
+*.log
+logs/
+
+############################################
+# SQLite (if ever used locally)
+############################################
+*.sqlite3
+*.db
+
+############################################
+# Docker
+############################################
+docker-compose.override.yml
+
+############################################
+# IDE / Editor
+############################################
+.vscode/
+.idea/
+*.swp
+*.swo
+
+############################################
+# OS files
+############################################
+.DS_Store
+Thumbs.db
+
+############################################
+# Node / Next.js frontend
+############################################
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+
+############################################
+# Coverage / Reports
+############################################
+coverage.xml
+*.lcov
+
+############################################
+# Misc
+############################################
+*.bak
+*.tmp

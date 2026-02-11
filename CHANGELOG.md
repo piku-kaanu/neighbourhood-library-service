@@ -22,3 +22,12 @@ to Semantic Versioning.
 
 -   Created all the model files.
 -   Created docker compose files.
+
+------------------------------------------------------------------------
+
+## \[0.1.2\] - 2026-02-11
+
+### Added
+
+-   Added proper requirements file
+-   Added Alembic setup

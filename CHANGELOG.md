@@ -13,3 +13,12 @@ to Semantic Versioning.
 
 -   Initial project setup
 -   Added README.md file
+
+------------------------------------------------------------------------
+
+## \[0.1.1\] - 2026-02-11
+
+### Added
+
+-   Created all the model files.
+-   Created docker compose files.

@@ -1,17 +1,17 @@
-# app/models/member.py
+# app/models/borrow.py
 
 import uuid
-from datetime import datetime, date
+from datetime import datetime
 
-from sqlalchemy import String, Boolean, Date, DateTime, Index
+from sqlalchemy import DateTime, ForeignKey, String, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
 
 
-class Member(Base):
-    __tablename__ = "members"
+class BorrowTransaction(Base):
+    __tablename__ = "borrow_transactions"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -19,34 +19,49 @@ class Member(Base):
         default=uuid.uuid4,
     )
 
-    full_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    phone: Mapped[str | None] = mapped_column(String(20))
-
-    membership_date: Mapped[date] = mapped_column(
-        Date,
-        default=date.today,
+    book_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("books.id", ondelete="CASCADE"),
         nullable=False,
     )
 
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("members.id", ondelete="CASCADE"),
+        nullable=False,
+    )
 
-    created_at: Mapped[datetime] = mapped_column(
+    borrowed_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
         nullable=False,
     )
 
-    # Relationships
-    borrow_transactions = relationship(
-        "BorrowTransaction",
-        back_populates="member",
-        cascade="all, delete-orphan",
+    due_date: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
     )
 
+    returned_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="BORROWED",
+        nullable=False,
+    )
+
+    # Relationships
+    book = relationship("Book", back_populates="borrow_transactions")
+    member = relationship("Member", back_populates="borrow_transactions")
+
     __table_args__ = (
-        Index("idx_members_email", "email"),
+        Index("idx_borrow_member_id", "member_id"),
+        Index("idx_borrow_book_id", "book_id"),
+        Index("idx_borrow_status", "status"),
     )
 
     def __repr__(self) -> str:
-        return f"<Member(id={self.id}, name={self.full_name})>"
+        return f"<BorrowTransaction(id={self.id}, status={self.status})>"

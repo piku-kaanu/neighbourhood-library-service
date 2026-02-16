@@ -29,11 +29,18 @@
     .btn-cancel { background: #e2e8f0; border: none; }
     .btn-update-wrap .btn-delete { margin-left: 0.25rem; background: #c53030; color: #fff; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; }
     .btn-update-wrap .btn-delete:hover { background: #9b2c2c; }
+    .flash { padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
+    .flash-success { background: #c6f6d5; color: #22543d; border: 1px solid #9ae6b4; }
 </style>
 {% endblock %}
 
 {% block content %}
 <h2>Members</h2>
+{% if member_created_flash %}
+<div class="flash flash-success" role="alert">
+    Member created. A login user was created so they can sign in: use email <strong>{{ member_created_flash.email }}</strong> and temporary password <strong>{{ member_created_flash.temp_password }}</strong>. Save this password; it won't be shown again.
+</div>
+{% endif %}
 <p><a href="{{ request.url_for('member_new') }}" class="btn-add">Add member</a></p>
 
 <form method="get" action="{{ request.url.path }}" class="filter-form">

@@ -2,7 +2,20 @@
 
 {% block title %}Home — Neighborhood Library{% endblock %}
 
+{% block extra_css %}
+<style>
+    .error { color: #c53030; }
+</style>
+{% endblock %}
+
 {% block content %}
 <h2>Welcome</h2>
-<p>Browse books, manage members, and track lending for your neighborhood library.</p>
+{% if error == 'forbidden' %}
+<p class="error">You don't have permission to view that page.</p>
+{% endif %}
+{% if user %}
+<p>Hello, {{ user.username }}. Use the menu to browse books{% if user.role == 'SUPER_ADMIN' %}, manage members, and handle borrows{% else %} or view your borrows{% endif %}.</p>
+{% else %}
+<p>Browse books, manage members, and track lending for your neighborhood library. <a href="{{ request.url_for('login_page') }}">Log in</a> to continue.</p>
+{% endif %}
 {% endblock %}

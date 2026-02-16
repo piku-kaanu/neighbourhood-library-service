@@ -34,7 +34,9 @@
 
 {% block content %}
 <h2>Books</h2>
+{% if user and user.role == 'SUPER_ADMIN' %}
 <p><a href="{{ request.url_for('book_new') }}" class="btn-add">Add book</a></p>
+{% endif %}
 
 <form method="get" action="{{ request.url.path }}" class="filter-form">
     <div class="filter-row">
@@ -64,13 +66,13 @@
             <th>ISBN</th>
             <th>Year</th>
             <th>Available</th>
-            <th>Actions</th>
+            {% if user and user.role == 'SUPER_ADMIN' %}<th>Actions</th>{% endif %}
         </tr>
     </thead>
     <tbody>
         {% for book in books %}
         {% set update_url = request.url.path.rstrip('/') ~ '/' ~ book.id %}
-        <tr data-book-id="{{ book.id }}" data-update-url="{{ update_url }}">
+        <tr data-book-id="{{ book.id }}" data-update-url="{{ update_url }}" data-can-edit="{{ '1' if user and user.role == 'SUPER_ADMIN' else '0' }}">
             <td>
                 <span class="cell-view">{{ book.title }}</span>
                 <span class="cell-edit"><input type="text" name="title" value="{{ book.title }}"></span>
@@ -94,6 +96,7 @@
                     <input type="number" name="total_copies" value="{{ book.total_copies }}" min="1" style="width:4rem">
                 </span>
             </td>
+            {% if user and user.role == 'SUPER_ADMIN' %}
             <td>
                 <span class="btn-update-wrap">
                     <button type="button" class="btn-update">Update</button>
@@ -104,6 +107,7 @@
                     <button type="button" class="btn-cancel">Cancel</button>
                 </span>
             </td>
+            {% endif %}
         </tr>
         {% endfor %}
     </tbody>
@@ -114,9 +118,10 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if user and user.role == 'SUPER_ADMIN' %}
 <script>
 (function() {
-    document.querySelectorAll('.books-table tbody tr').forEach(function(row) {
+    document.querySelectorAll('.books-table tbody tr[data-can-edit="1"]').forEach(function(row) {
         var updateUrl = row.dataset.updateUrl;
         if (!updateUrl) return;
         var btnUpdate = row.querySelector('.btn-update');
@@ -233,4 +238,5 @@
     });
 })();
 </script>
+{% endif %}
 {% endblock %}

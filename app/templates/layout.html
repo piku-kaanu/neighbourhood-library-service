@@ -22,10 +22,21 @@
         <h1>Neighborhood Library</h1>
         <nav>
             <a href="{{ request.url_for('index') }}">Home</a>
-            <a href="{{ request.url_for('books_list') }}">Books</a>
-            <a href="{{ request.url_for('members_list') }}">Members</a>
-            <a href="{{ request.url_for('borrow_form') }}">Borrow</a>
-            <a href="{{ request.url_for('borrow_list') }}">Borrow list</a>
+            {% if request.state.user %}
+                <a href="{{ request.url_for('books_list') }}">Books</a>
+                {% if request.state.user.role == 'SUPER_ADMIN' %}
+                <a href="{{ request.url_for('members_list') }}">Members</a>
+                <a href="{{ request.url_for('borrow_form') }}">Borrow</a>
+                <a href="{{ request.url_for('borrow_list') }}">Borrow list</a>
+                {% else %}
+                <a href="{{ request.url_for('my_borrows') }}">My borrows</a>
+                {% endif %}
+                <form method="post" action="{{ request.url_for('logout') }}" style="display:inline;">
+                    <button type="submit" style="background:none;border:none;color:#bee3f8;cursor:pointer;font-size:1rem;">Logout ({{ request.state.user.username }})</button>
+                </form>
+            {% else %}
+                <a href="{{ request.url_for('login_page') }}">Login</a>
+            {% endif %}
         </nav>
     </header>
 

@@ -1,6 +1,8 @@
 # app/api/members.py
 
 import re
+import secrets
+import string
 import uuid
 from datetime import date
 from pathlib import Path
@@ -11,8 +13,10 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.core.auth import hash_password, require_super_admin
 from app.database import get_db
 from app.models.member import Member
+from app.models.user import User
 
 router = APIRouter(prefix="/api/v1/members", tags=["members"])
 
@@ -74,12 +78,14 @@ def filter_members_query(
 def members_list(
     request: Request,
     db: Session = Depends(get_db),
+    user: User = Depends(require_super_admin),
     name: Optional[str] = Query(None),
     email: Optional[str] = Query(None),
     is_active: Optional[str] = Query(None),
 ):
     """List all members (HTML page) with optional filters."""
     members = filter_members_query(db, name, email, is_active).all()
+    member_created_flash = request.session.pop("member_created_flash", None)
     return templates.TemplateResponse(
         request=request,
         name="members_list.html",
@@ -88,12 +94,13 @@ def members_list(
             "filter_name": name or "",
             "filter_email": email or "",
             "filter_is_active": is_active or "all",
+            "member_created_flash": member_created_flash,
         },
     )
 
 
 @router.get("/new", response_class=HTMLResponse)
-def member_new(request: Request):
+def member_new(request: Request, user: User = Depends(require_super_admin)):
     """Show add-member form."""
     return templates.TemplateResponse(
         request=request,
@@ -106,6 +113,7 @@ def member_new(request: Request):
 def member_create(
     request: Request,
     db: Session = Depends(get_db),
+    user: User = Depends(require_super_admin),
     full_name: str = Form(...),
     email: str = Form(...),
     phone: str = Form(...),
@@ -159,6 +167,25 @@ def member_create(
     )
     db.add(member)
     db.commit()
+    db.refresh(member)
+
+    # Automatically create a MEMBER login user for this member (username = email)
+    member_created_flash = None
+    if not db.query(User).filter(User.username == member.email).first():
+        temp_password = "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
+        db.add(
+            User(
+                username=member.email,
+                password_hash=hash_password(temp_password),
+                role="MEMBER",
+                member_id=member.id,
+            )
+        )
+        db.commit()
+        member_created_flash = {"email": member.email, "temp_password": temp_password}
+
+    if member_created_flash:
+        request.session["member_created_flash"] = member_created_flash
     return RedirectResponse(url=request.url_for("members_list"), status_code=303)
 
 
@@ -167,6 +194,7 @@ def member_update(
     member_id: uuid.UUID,
     request: Request,
     db: Session = Depends(get_db),
+    user: User = Depends(require_super_admin),
     full_name: str = Form(...),
     email: str = Form(...),
     phone: str = Form(...),
@@ -224,7 +252,7 @@ def member_update(
 
 
 @router.delete("/{member_id}")
-def member_delete(member_id: uuid.UUID, db: Session = Depends(get_db)):
+def member_delete(member_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(require_super_admin)):
     """Delete a member."""
     member = db.query(Member).filter(Member.id == member_id).first()
     if not member:

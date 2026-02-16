@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+
+{% block title %}My borrows — Neighborhood Library{% endblock %}
+
+{% block extra_css %}
+<style>
+    .borrow-table { width: 100%; border-collapse: collapse; }
+    .borrow-table th, .borrow-table td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    .borrow-table th { background: #f7fafc; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>My borrows</h2>
+{% if transactions %}
+<table class="borrow-table">
+    <thead>
+        <tr>
+            <th>Book</th>
+            <th>Borrowed at</th>
+            <th>Due date</th>
+            <th>Returned at</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tx in transactions %}
+        <tr>
+            <td>{{ tx.book.title if tx.book else '—' }} {% if tx.book %} — {{ tx.book.author }}{% endif %}</td>
+            <td>{{ tx.borrowed_at.strftime('%Y-%m-%d %H:%M') if tx.borrowed_at else '—' }}</td>
+            <td>{{ tx.due_date.strftime('%Y-%m-%d') if tx.due_date else '—' }}</td>
+            <td>{{ tx.returned_at.strftime('%Y-%m-%d %H:%M') if tx.returned_at else '—' }}</td>
+            <td>{{ tx.status }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>You have no borrow transactions.</p>
+{% endif %}
+{% endblock %}

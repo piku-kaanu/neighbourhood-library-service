@@ -12,10 +12,12 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.auth import require_member_or_admin, require_super_admin
 from app.database import get_db
 from app.models.book import Book
 from app.models.borrow import BorrowTransaction
 from app.models.member import Member
+from app.models.user import User
 from app.schemas.borrow import BorrowRequest, BorrowTransactionResponse
 
 router = APIRouter(prefix="/api/v1/borrow", tags=["borrow"])
@@ -36,10 +38,32 @@ def _get_transaction_with_book_member(
     )
 
 
+@router.get("/my-borrows", response_class=HTMLResponse)
+def my_borrows(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_member_or_admin),
+):
+    """List borrow transactions for the current user (member sees only their own)."""
+    q = db.query(BorrowTransaction).options(
+        joinedload(BorrowTransaction.book),
+        joinedload(BorrowTransaction.member),
+    ).order_by(BorrowTransaction.borrowed_at.desc())
+    if user.role == "MEMBER" and user.member_id:
+        q = q.filter(BorrowTransaction.member_id == user.member_id)
+    transactions = q.all()
+    return templates.TemplateResponse(
+        request=request,
+        name="my_borrows.html",
+        context={"transactions": transactions, "user": user},
+    )
+
+
 @router.post("/", response_model=BorrowTransactionResponse)
 def borrow_book(
     body: BorrowRequest,
     db: Session = Depends(get_db),
+    user: User = Depends(require_super_admin),
 ):
     """
     Borrow a book for a member.
@@ -85,6 +109,7 @@ def borrow_book(
 def return_book(
     transaction_id: uuid.UUID,
     db: Session = Depends(get_db),
+    user: User = Depends(require_super_admin),
 ):
     """
     Return a borrowed book.
@@ -115,6 +140,7 @@ def return_book(
 def borrow_form(
     request: Request,
     db: Session = Depends(get_db),
+    user: User = Depends(require_super_admin),
     success: Optional[str] = Query(None),
     due_date: Optional[str] = Query(None),
     error: Optional[str] = Query(None),
@@ -140,6 +166,7 @@ def borrow_form(
 def borrow_submit(
     request: Request,
     db: Session = Depends(get_db),
+    user: User = Depends(require_super_admin),
     book_id: str = Form(...),
     member_id: str = Form(...),
     loan_days: int = Form(14),
@@ -209,6 +236,7 @@ def _filter_borrow_query(
 def borrow_list(
     request: Request,
     db: Session = Depends(get_db),
+    user: User = Depends(require_super_admin),
     member_id: Optional[str] = Query(None),
     book_id: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
@@ -282,6 +310,7 @@ def borrow_return_form(
     transaction_id: uuid.UUID,
     request: Request,
     db: Session = Depends(get_db),
+    user: User = Depends(require_super_admin),
 ):
     """Return a book (form POST). Redirects to borrow list."""
     transaction = _get_transaction_with_book_member(db, transaction_id)
@@ -305,12 +334,13 @@ def borrow_return_form(
 @router.get("/", response_model=list[BorrowTransactionResponse])
 def list_transactions(
     db: Session = Depends(get_db),
+    user: User = Depends(require_super_admin),
     member_id: Optional[uuid.UUID] = Query(None),
     book_id: Optional[uuid.UUID] = Query(None),
     status: Optional[str] = Query(None),
 ):
     """
-    List borrow transactions with optional filters: member_id, book_id, status.
+    List borrow transactions with optional filters: member_id, book_id, status. Super admin only.
     """
     q = _filter_borrow_query(db, member_id, book_id, status)
     return q.all()

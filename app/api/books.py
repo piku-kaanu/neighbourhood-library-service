@@ -9,8 +9,10 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.core.auth import require_member_or_admin, require_super_admin
 from app.database import get_db
 from app.models.book import Book
+from app.models.user import User
 
 router = APIRouter(prefix="/api/v1/books", tags=["books"])
 
@@ -37,6 +39,7 @@ def filter_books_query(db: Session, title: Optional[str], author: Optional[str],
 def books_list(
     request: Request,
     db: Session = Depends(get_db),
+    user: User = Depends(require_member_or_admin),
     title: Optional[str] = Query(None),
     author: Optional[str] = Query(None),
     year: Optional[str] = Query(None),
@@ -61,12 +64,13 @@ def books_list(
             "filter_author": author or "",
             "filter_year": year if year is not None else "",
             "filter_available": available or "all",
+            "user": user,
         },
     )
 
 
 @router.get("/new", response_class=HTMLResponse)
-def book_new(request: Request):
+def book_new(request: Request, user: User = Depends(require_super_admin)):
     """Show add-book form."""
     return templates.TemplateResponse(
         request=request,
@@ -79,6 +83,7 @@ def book_new(request: Request):
 def book_create(
     request: Request,
     db: Session = Depends(get_db),
+    user: User = Depends(require_super_admin),
     title: str = Form(...),
     author: str = Form(...),
     isbn: str = Form(...),
@@ -137,6 +142,7 @@ def book_update(
     book_id: uuid.UUID,
     request: Request,
     db: Session = Depends(get_db),
+    user: User = Depends(require_super_admin),
     title: str = Form(...),
     author: str = Form(...),
     isbn: str = Form(...),
@@ -186,7 +192,7 @@ def book_update(
 
 
 @router.delete("/{book_id}")
-def book_delete(book_id: uuid.UUID, db: Session = Depends(get_db)):
+def book_delete(book_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(require_super_admin)):
     """Delete a book."""
     book = db.query(Book).filter(Book.id == book_id).first()
     if not book:

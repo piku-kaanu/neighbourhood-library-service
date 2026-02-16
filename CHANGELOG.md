@@ -31,3 +31,11 @@ to Semantic Versioning.
 
 -   Added proper requirements file
 -   Added Alembic setup
+
+------------------------------------------------------------------------
+
+## \[0.1.3\] - 2026-02-16
+
+### Added
+
+- CRUD for books.

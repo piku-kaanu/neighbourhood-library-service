@@ -16,6 +16,19 @@
     .filter-row select { padding: 0.35rem 0.5rem; }
     .btn-filter { padding: 0.35rem 0.75rem; background: #2c5282; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
     .btn-clear { padding: 0.35rem 0.75rem; color: #4a5568; font-size: 0.875rem; }
+    .cell-edit input { width: 100%; max-width: 12rem; padding: 0.25rem; }
+    .cell-edit { display: none; }
+    tr.editing .cell-view { display: none; }
+    tr.editing .cell-edit { display: table-cell; }
+    tr.editing .btn-update-wrap { display: none; }
+    tr.editing .edit-actions { display: inline; }
+    .edit-actions { display: none; }
+    .edit-actions button { margin-right: 0.25rem; padding: 0.25rem 0.5rem; cursor: pointer; border-radius: 4px; }
+    .btn-save { background: #2c5282; color: #fff; border: none; }
+    .btn-save:disabled { background: #a0aec0; cursor: not-allowed; }
+    .btn-cancel { background: #e2e8f0; border: none; }
+    .btn-update-wrap .btn-delete { margin-left: 0.25rem; background: #c53030; color: #fff; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; }
+    .btn-update-wrap .btn-delete:hover { background: #9b2c2c; }
 </style>
 {% endblock %}
 
@@ -51,16 +64,46 @@
             <th>ISBN</th>
             <th>Year</th>
             <th>Available</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
         {% for book in books %}
-        <tr>
-            <td>{{ book.title }}</td>
-            <td>{{ book.author }}</td>
-            <td>{{ book.isbn or '—' }}</td>
-            <td>{{ book.published_year or '—' }}</td>
-            <td>{{ book.available_copies }} / {{ book.total_copies }}</td>
+        {% set update_url = request.url.path.rstrip('/') ~ '/' ~ book.id %}
+        <tr data-book-id="{{ book.id }}" data-update-url="{{ update_url }}">
+            <td>
+                <span class="cell-view">{{ book.title }}</span>
+                <span class="cell-edit"><input type="text" name="title" value="{{ book.title }}"></span>
+            </td>
+            <td>
+                <span class="cell-view">{{ book.author }}</span>
+                <span class="cell-edit"><input type="text" name="author" value="{{ book.author }}"></span>
+            </td>
+            <td>
+                <span class="cell-view">{{ book.isbn or '—' }}</span>
+                <span class="cell-edit"><input type="text" name="isbn" value="{{ book.isbn or '' }}" maxlength="20"></span>
+            </td>
+            <td>
+                <span class="cell-view">{{ book.published_year or '—' }}</span>
+                <span class="cell-edit"><input type="number" name="published_year" value="{{ book.published_year or '' }}" min="1" max="9999"></span>
+            </td>
+            <td>
+                <span class="cell-view">{{ book.available_copies }} / {{ book.total_copies }}</span>
+                <span class="cell-edit">
+                    <input type="number" name="available_copies" value="{{ book.available_copies }}" min="0" style="width:4rem"> /
+                    <input type="number" name="total_copies" value="{{ book.total_copies }}" min="1" style="width:4rem">
+                </span>
+            </td>
+            <td>
+                <span class="btn-update-wrap">
+                    <button type="button" class="btn-update">Update</button>
+                    <button type="button" class="btn-delete">Delete</button>
+                </span>
+                <span class="edit-actions">
+                    <button type="button" class="btn-save" disabled>Save</button>
+                    <button type="button" class="btn-cancel">Cancel</button>
+                </span>
+            </td>
         </tr>
         {% endfor %}
     </tbody>
@@ -68,4 +111,126 @@
 {% else %}
 <p>No books in the library yet.</p>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    document.querySelectorAll('.books-table tbody tr').forEach(function(row) {
+        var updateUrl = row.dataset.updateUrl;
+        if (!updateUrl) return;
+        var btnUpdate = row.querySelector('.btn-update');
+        var btnDelete = row.querySelector('.btn-delete');
+        var btnSave = row.querySelector('.btn-save');
+        var btnCancel = row.querySelector('.btn-cancel');
+        var viewCells = row.querySelectorAll('.cell-view');
+        var editInputs = row.querySelectorAll('.cell-edit input');
+
+        function isAllRequiredFilled() {
+            var title = (row.querySelector('input[name="title"]').value || '').trim();
+            var author = (row.querySelector('input[name="author"]').value || '').trim();
+            var isbn = (row.querySelector('input[name="isbn"]').value || '').trim();
+            var yearVal = row.querySelector('input[name="published_year"]').value;
+            var year = yearVal !== '' ? parseInt(yearVal, 10) : NaN;
+            var availVal = row.querySelector('input[name="available_copies"]').value;
+            var totalVal = row.querySelector('input[name="total_copies"]').value;
+            var available = availVal !== '' ? parseInt(availVal, 10) : NaN;
+            var total = totalVal !== '' ? parseInt(totalVal, 10) : NaN;
+            return title !== '' && author !== '' && isbn !== '' &&
+                   !isNaN(year) && year >= 1 && year <= 9999 &&
+                   !isNaN(total) && total >= 1 &&
+                   !isNaN(available) && available >= 0 && available <= total;
+        }
+
+        function updateSaveButton() {
+            btnSave.disabled = !isAllRequiredFilled();
+        }
+
+        function enterEdit() {
+            row._editSnapshot = {};
+            row.querySelectorAll('.cell-edit input').forEach(function(inp) {
+                row._editSnapshot[inp.name] = inp.value;
+            });
+            row.classList.add('editing');
+            updateSaveButton();
+        }
+        function exitEdit() { row.classList.remove('editing'); }
+
+        function getFormData() {
+            var data = new URLSearchParams();
+            row.querySelectorAll('.cell-edit input').forEach(function(inp) {
+                data.append(inp.name, inp.value || '');
+            });
+            return data;
+        }
+
+        function updateViewFromResponse(res) {
+            var idx = 0;
+            viewCells.forEach(function(cell) {
+                if (idx === 0) cell.textContent = res.title;
+                else if (idx === 1) cell.textContent = res.author;
+                else if (idx === 2) cell.textContent = res.isbn || '—';
+                else if (idx === 3) cell.textContent = res.published_year != null ? res.published_year : '—';
+                else if (idx === 4) cell.textContent = res.available_copies + ' / ' + res.total_copies;
+                idx++;
+            });
+        }
+
+        row.querySelectorAll('.cell-edit input').forEach(function(inp) {
+            inp.addEventListener('input', updateSaveButton);
+            inp.addEventListener('change', updateSaveButton);
+        });
+
+        btnUpdate.addEventListener('click', enterEdit);
+
+        btnDelete.addEventListener('click', function() {
+            if (!confirm('Delete this book?')) return;
+            fetch(updateUrl, { method: 'DELETE' }).then(function(r) {
+                if (r.ok) {
+                    row.remove();
+                } else {
+                    r.json().then(function(err) { alert(err.error || 'Delete failed.'); });
+                }
+            }).catch(function() { alert('Delete failed.'); });
+        });
+
+        btnCancel.addEventListener('click', function() {
+            if (row._editSnapshot) {
+                row.querySelectorAll('.cell-edit input').forEach(function(inp) {
+                    inp.value = row._editSnapshot[inp.name] != null ? row._editSnapshot[inp.name] : '';
+                });
+            }
+            exitEdit();
+        });
+
+        btnSave.addEventListener('click', function() {
+            var data = getFormData();
+            fetch(updateUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: data
+            }).then(function(r) {
+                if (r.ok) return r.json();
+                return r.json().then(function(err) { throw err; });
+            }).then(function(book) {
+                updateViewFromResponse(book);
+                exitEdit();
+                row.querySelector('input[name="title"]').value = book.title;
+                row.querySelector('input[name="author"]').value = book.author;
+                row.querySelector('input[name="isbn"]').value = book.isbn || '';
+                row.querySelector('input[name="published_year"]').value = book.published_year != null ? book.published_year : '';
+                row.querySelector('input[name="available_copies"]').value = book.available_copies;
+                row.querySelector('input[name="total_copies"]').value = book.total_copies;
+            }).catch(function(err) {
+                if (err && err.errors) {
+                    var msg = Object.values(err.errors).join(' ');
+                    alert('Validation: ' + msg);
+                } else {
+                    alert('Update failed.');
+                }
+            });
+        });
+    });
+})();
+</script>
 {% endblock %}

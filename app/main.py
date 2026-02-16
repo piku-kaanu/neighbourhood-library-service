@@ -30,32 +30,9 @@ def index(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
 
 
-@app.get("/books", response_class=HTMLResponse)
-def books_list(
-    request: Request,
-    db: Session = Depends(get_db),
-    title: Optional[str] = Query(None),
-    author: Optional[str] = Query(None),
-    year: Optional[int] = Query(None),
-    available: Optional[str] = Query(None),
-):
-    """List all books (HTML page) with optional filters."""
-    book_list = filter_books_query(db, title, author, year, available).all()
-    return templates.TemplateResponse(
-        request=request,
-        name="books_list.html",
-        context={
-            "books": book_list,
-            "filter_title": title or "",
-            "filter_author": author or "",
-            "filter_year": year if year is not None else "",
-            "filter_available": available or "all",
-        },
-    )
-
-
 @app.get("/health")
 @app.get("/api/v1/health")
 def healthcheck():
     """Health check for load balancers and container orchestration."""
     return {"status": "ok"}
+

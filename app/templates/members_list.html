@@ -1,0 +1,231 @@
+{% extends "layout.html" %}
+
+{% block title %}Members — Neighborhood Library{% endblock %}
+
+{% block extra_css %}
+<style>
+    .members-table { width: 100%; border-collapse: collapse; }
+    .members-table th, .members-table td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    .members-table th { background: #f7fafc; font-weight: 600; }
+    .btn-add { display: inline-block; padding: 0.5rem 1rem; background: #2c5282; color: #fff; text-decoration: none; border-radius: 4px; }
+    .btn-add:hover { background: #2a4365; }
+    .filter-form { margin: 1rem 0; padding: 1rem; background: #f7fafc; border-radius: 4px; }
+    .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+    .filter-row label { font-weight: 500; }
+    .filter-row input[type="text"] { padding: 0.35rem 0.5rem; max-width: 10rem; }
+    .filter-row select { padding: 0.35rem 0.5rem; }
+    .btn-filter { padding: 0.35rem 0.75rem; background: #2c5282; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-clear { padding: 0.35rem 0.75rem; color: #4a5568; font-size: 0.875rem; }
+    .cell-edit input, .cell-edit select { width: 100%; max-width: 12rem; padding: 0.25rem; }
+    .cell-edit { display: none; }
+    tr.editing .cell-view { display: none; }
+    tr.editing .cell-edit { display: table-cell; }
+    tr.editing .btn-update-wrap { display: none; }
+    tr.editing .edit-actions { display: inline; }
+    .edit-actions { display: none; }
+    .edit-actions button { margin-right: 0.25rem; padding: 0.25rem 0.5rem; cursor: pointer; border-radius: 4px; }
+    .btn-save { background: #2c5282; color: #fff; border: none; }
+    .btn-save:disabled { background: #a0aec0; cursor: not-allowed; }
+    .btn-cancel { background: #e2e8f0; border: none; }
+    .btn-update-wrap .btn-delete { margin-left: 0.25rem; background: #c53030; color: #fff; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; }
+    .btn-update-wrap .btn-delete:hover { background: #9b2c2c; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>Members</h2>
+<p><a href="{{ request.url_for('member_new') }}" class="btn-add">Add member</a></p>
+
+<form method="get" action="{{ request.url.path }}" class="filter-form">
+    <div class="filter-row">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" value="{{ filter_name | default('') }}" placeholder="Search name">
+        <label for="email">Email</label>
+        <input type="text" id="email" name="email" value="{{ filter_email | default('') }}" placeholder="Search email">
+        <label for="is_active">Status</label>
+        <select id="is_active" name="is_active">
+            <option value="all" {{ 'selected' if (filter_is_active | default('all')) == 'all' else '' }}>All</option>
+            <option value="true" {{ 'selected' if (filter_is_active | default('')) == 'true' else '' }}>Active</option>
+            <option value="false" {{ 'selected' if (filter_is_active | default('')) == 'false' else '' }}>Inactive</option>
+        </select>
+        <button type="submit" class="btn-filter">Filter</button>
+        <a href="{{ request.url.path }}" class="btn-clear">Clear</a>
+    </div>
+</form>
+
+{% if members %}
+<table class="members-table">
+    <thead>
+        <tr>
+            <th>Full name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Membership date</th>
+            <th>Active</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for member in members %}
+        {% set update_url = request.url.path.rstrip('/') ~ '/' ~ member.id %}
+        {% set mem_date = member.membership_date.isoformat() if member.membership_date else '' %}
+        <tr data-member-id="{{ member.id }}" data-update-url="{{ update_url }}">
+            <td>
+                <span class="cell-view">{{ member.full_name }}</span>
+                <span class="cell-edit"><input type="text" name="full_name" value="{{ member.full_name }}"></span>
+            </td>
+            <td>
+                <span class="cell-view">{{ member.email }}</span>
+                <span class="cell-edit"><input type="email" name="email" value="{{ member.email }}"></span>
+            </td>
+            <td>
+                <span class="cell-view">{{ member.phone or '—' }}</span>
+                <span class="cell-edit"><input type="text" name="phone" value="{{ member.phone or '' }}" maxlength="20"></span>
+            </td>
+            <td>
+                <span class="cell-view">{{ member.membership_date.isoformat() if member.membership_date else '—' }}</span>
+                <span class="cell-edit"><input type="date" name="membership_date" value="{{ mem_date }}"></span>
+            </td>
+            <td>
+                <span class="cell-view">{{ 'Yes' if member.is_active else 'No' }}</span>
+                <span class="cell-edit">
+                    <select name="is_active">
+                        <option value="true" {{ 'selected' if member.is_active else '' }}>Yes</option>
+                        <option value="false" {{ 'selected' if not member.is_active else '' }}>No</option>
+                    </select>
+                </span>
+            </td>
+            <td>
+                <span class="btn-update-wrap">
+                    <button type="button" class="btn-update">Update</button>
+                    <button type="button" class="btn-delete">Delete</button>
+                </span>
+                <span class="edit-actions">
+                    <button type="button" class="btn-save" disabled>Save</button>
+                    <button type="button" class="btn-cancel">Cancel</button>
+                </span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No members yet.</p>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    document.querySelectorAll('.members-table tbody tr').forEach(function(row) {
+        var updateUrl = row.dataset.updateUrl;
+        if (!updateUrl) return;
+        var btnUpdate = row.querySelector('.btn-update');
+        var btnDelete = row.querySelector('.btn-delete');
+        var btnSave = row.querySelector('.btn-save');
+        var btnCancel = row.querySelector('.btn-cancel');
+        var viewCells = row.querySelectorAll('.cell-view');
+
+        function isValidEmail(s) {
+            return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test((s || '').trim());
+        }
+        function isValidPhone(s) {
+            var t = (s || '').trim().replace(/[\s\-()]/g, '');
+            if (t.charAt(0) === '+') t = t.slice(1);
+            return /^\d+$/.test(t) && t.length >= 10 && t.length <= 15 && (s || '').trim().length <= 20;
+        }
+        function isAllRequiredFilled() {
+            var fullName = (row.querySelector('input[name="full_name"]').value || '').trim();
+            var email = (row.querySelector('input[name="email"]').value || '').trim();
+            var phone = (row.querySelector('input[name="phone"]').value || '').trim();
+            var membershipDate = (row.querySelector('input[name="membership_date"]').value || '').trim();
+            return fullName !== '' && email !== '' && isValidEmail(email) && phone !== '' && isValidPhone(phone) && membershipDate !== '';
+        }
+
+        function updateSaveButton() {
+            btnSave.disabled = !isAllRequiredFilled();
+        }
+
+        function enterEdit() {
+            row._editSnapshot = {};
+            row.querySelectorAll('.cell-edit input, .cell-edit select').forEach(function(el) {
+                row._editSnapshot[el.name] = el.value;
+            });
+            row.classList.add('editing');
+            updateSaveButton();
+        }
+        function exitEdit() { row.classList.remove('editing'); }
+
+        function getFormData() {
+            var data = new URLSearchParams();
+            row.querySelectorAll('.cell-edit input, .cell-edit select').forEach(function(el) {
+                data.append(el.name, el.value || '');
+            });
+            return data;
+        }
+
+        function updateViewFromResponse(res) {
+            var idx = 0;
+            viewCells.forEach(function(cell) {
+                if (idx === 0) cell.textContent = res.full_name;
+                else if (idx === 1) cell.textContent = res.email;
+                else if (idx === 2) cell.textContent = res.phone || '—';
+                else if (idx === 3) cell.textContent = res.membership_date || '—';
+                else if (idx === 4) cell.textContent = res.is_active ? 'Yes' : 'No';
+                idx++;
+            });
+        }
+
+        row.querySelectorAll('.cell-edit input, .cell-edit select').forEach(function(el) {
+            el.addEventListener('input', updateSaveButton);
+            el.addEventListener('change', updateSaveButton);
+        });
+
+        btnUpdate.addEventListener('click', enterEdit);
+
+        btnDelete.addEventListener('click', function() {
+            if (!confirm('Delete this member?')) return;
+            fetch(updateUrl, { method: 'DELETE' }).then(function(r) {
+                if (r.ok) row.remove();
+                else r.json().then(function(err) { alert(err.error || 'Delete failed.'); });
+            }).catch(function() { alert('Delete failed.'); });
+        });
+
+        btnCancel.addEventListener('click', function() {
+            if (row._editSnapshot) {
+                row.querySelectorAll('.cell-edit input, .cell-edit select').forEach(function(el) {
+                    el.value = row._editSnapshot[el.name] != null ? row._editSnapshot[el.name] : '';
+                });
+            }
+            exitEdit();
+        });
+
+        btnSave.addEventListener('click', function() {
+            var data = getFormData();
+            fetch(updateUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: data
+            }).then(function(r) {
+                if (r.ok) return r.json();
+                return r.json().then(function(err) { throw err; });
+            }).then(function(member) {
+                updateViewFromResponse(member);
+                exitEdit();
+                row.querySelector('input[name="full_name"]').value = member.full_name;
+                row.querySelector('input[name="email"]').value = member.email;
+                row.querySelector('input[name="phone"]').value = member.phone || '';
+                row.querySelector('input[name="membership_date"]').value = member.membership_date || '';
+                row.querySelector('select[name="is_active"]').value = member.is_active ? 'true' : 'false';
+            }).catch(function(err) {
+                if (err && err.errors) {
+                    alert('Validation: ' + Object.values(err.errors).join(' '));
+                } else {
+                    alert('Update failed.');
+                }
+            });
+        });
+    });
+})();
+</script>
+{% endblock %}

@@ -9,6 +9,8 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.api import books as books_router
+from app.api import borrow as borrow_router
+from app.api import members as members_router
 from app.api.books import filter_books_query
 from app.database import get_db
 from app.models.book import Book
@@ -22,6 +24,8 @@ app = FastAPI(
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 app.include_router(books_router.router)
+app.include_router(members_router.router)
+app.include_router(borrow_router.router)
 
 
 @app.get("/", response_class=HTMLResponse)

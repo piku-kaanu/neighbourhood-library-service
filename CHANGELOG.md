@@ -39,3 +39,23 @@ to Semantic Versioning.
 ### Added
 
 - CRUD for books.
+
+------------------------------------------------------------------------
+
+## \[0.2.0\] - 2026-02-16
+
+### Added
+
+- CRUD for Members.
+
+## \[0.2.1\] - 2026-02-16
+
+### Added
+
+- Pagination for all the list and filters.
+
+## \[1.0.0\] - 2026-02-16
+
+### Added
+
+- Added logic for the borrow book.

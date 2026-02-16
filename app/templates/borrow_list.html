@@ -1,0 +1,131 @@
+{% extends "layout.html" %}
+
+{% block title %}Borrow list — Neighborhood Library{% endblock %}
+
+{% block extra_css %}
+<style>
+    .borrow-table { width: 100%; border-collapse: collapse; }
+    .borrow-table th, .borrow-table td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    .borrow-table th { background: #f7fafc; font-weight: 600; }
+    .filter-form { margin: 1rem 0; padding: 1rem; background: #f7fafc; border-radius: 4px; }
+    .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+    .filter-row label { font-weight: 500; }
+    .filter-row select { padding: 0.35rem 0.5rem; max-width: 14rem; }
+    .btn-filter { padding: 0.35rem 0.75rem; background: #2c5282; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-clear { padding: 0.35rem 0.75rem; color: #4a5568; font-size: 0.875rem; }
+    .btn-borrow { display: inline-block; padding: 0.5rem 1rem; background: #2c5282; color: #fff; text-decoration: none; border-radius: 4px; margin-bottom: 1rem; }
+    .btn-borrow:hover { background: #2a4365; }
+    .btn-return { padding: 0.25rem 0.5rem; background: #38a169; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem; }
+    .btn-return:hover { background: #2f855a; }
+    .msg { padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; }
+    .msg.error { background: #fed7d7; color: #742a2a; }
+    .pagination { margin-top: 1rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .pagination a, .pagination span { padding: 0.35rem 0.6rem; text-decoration: none; border: 1px solid #e2e8f0; border-radius: 4px; color: #2d3748; }
+    .pagination a:hover { background: #edf2f7; }
+    .pagination .current { background: #2c5282; color: #fff; border-color: #2c5282; }
+    .pagination .disabled { color: #a0aec0; pointer-events: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>Borrow list</h2>
+<p><a href="{{ request.url_for('borrow_form') }}" class="btn-borrow">Borrow a book</a></p>
+
+{% if error %}
+<p class="msg error">{{ error }}</p>
+{% endif %}
+
+<form method="get" action="{{ request.url.path }}" class="filter-form">
+    <div class="filter-row">
+        <label for="member_id">Member</label>
+        <select id="member_id" name="member_id">
+            <option value="">— All members —</option>
+            {% for m in members %}
+            <option value="{{ m.id }}" {{ 'selected' if filter_member_id and (filter_member_id | string) == (m.id | string) else '' }}>{{ m.full_name }} ({{ m.email }})</option>
+            {% endfor %}
+        </select>
+        <label for="book_id">Book</label>
+        <select id="book_id" name="book_id">
+            <option value="">— All books —</option>
+            {% for b in books %}
+            <option value="{{ b.id }}" {{ 'selected' if filter_book_id and (filter_book_id | string) == (b.id | string) else '' }}>{{ b.title }} — {{ b.author }}</option>
+            {% endfor %}
+        </select>
+        <label for="status">Status</label>
+        <select id="status" name="status">
+            <option value="all" {{ 'selected' if (filter_status | default('all')) == 'all' else '' }}>All</option>
+            <option value="BORROWED" {{ 'selected' if (filter_status | default('')) == 'BORROWED' else '' }}>Borrowed</option>
+            <option value="RETURNED" {{ 'selected' if (filter_status | default('')) == 'RETURNED' else '' }}>Returned</option>
+        </select>
+        <label for="per_page">Per page</label>
+        <select id="per_page" name="per_page">
+            <option value="10" {{ 'selected' if per_page == 10 else '' }}>10</option>
+            <option value="25" {{ 'selected' if per_page == 25 else '' }}>25</option>
+            <option value="50" {{ 'selected' if per_page == 50 else '' }}>50</option>
+        </select>
+        <button type="submit" class="btn-filter">Filter</button>
+        <a href="{{ request.url.path }}" class="btn-clear">Clear</a>
+    </div>
+</form>
+
+{% if transactions %}
+<table class="borrow-table">
+    <thead>
+        <tr>
+            <th>Book</th>
+            <th>Member</th>
+            <th>Borrowed at</th>
+            <th>Due date</th>
+            <th>Returned at</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tx in transactions %}
+        <tr>
+            <td>{{ tx.book.title if tx.book else '—' }}</td>
+            <td>{{ tx.member.full_name if tx.member else '—' }}</td>
+            <td>{{ tx.borrowed_at.strftime('%Y-%m-%d %H:%M') if tx.borrowed_at else '—' }}</td>
+            <td>{{ tx.due_date.strftime('%Y-%m-%d') if tx.due_date else '—' }}</td>
+            <td>{{ tx.returned_at.strftime('%Y-%m-%d %H:%M') if tx.returned_at else '—' }}</td>
+            <td>{{ tx.status }}</td>
+            <td>
+                {% if tx.status == 'BORROWED' %}
+                <form method="post" action="{{ request.url_for('borrow_return_form', transaction_id=tx.id) }}" style="display:inline;">
+                    <button type="submit" class="btn-return">Return</button>
+                </form>
+                {% else %}
+                —
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="pagination">
+    <span>Page {{ page }} of {{ total_pages }} ({{ total }} total)</span>
+    {% set pq = pagination_query or '' %}
+    {% if page > 1 %}
+    <a href="{{ request.url.path }}?{{ pq }}{{ '&' if pq else '' }}page={{ page - 1 }}">Previous</a>
+    {% else %}
+    <span class="disabled">Previous</span>
+    {% endif %}
+    {% for p in range(1, total_pages + 1) %}
+        {% if p == page %}
+        <span class="current">{{ p }}</span>
+        {% else %}
+        <a href="{{ request.url.path }}?{{ pq }}{{ '&' if pq else '' }}page={{ p }}">{{ p }}</a>
+        {% endif %}
+    {% endfor %}
+    {% if page < total_pages %}
+    <a href="{{ request.url.path }}?{{ pq }}{{ '&' if pq else '' }}page={{ page + 1 }}">Next</a>
+    {% else %}
+    <span class="disabled">Next</span>
+    {% endif %}
+</div>
+{% else %}
+<p>No borrow transactions found.</p>
+{% endif %}
+{% endblock %}

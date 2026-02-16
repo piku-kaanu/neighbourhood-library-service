@@ -1,0 +1,68 @@
+{% extends "layout.html" %}
+
+{% block title %}Borrow a book — Neighborhood Library{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+    .form-group select, .form-group input[type="number"] { width: 100%; max-width: 24rem; padding: 0.5rem; }
+    .form-group .error { color: #c53030; font-size: 0.875rem; margin-top: 0.25rem; }
+    .form-actions { margin-top: 1.5rem; }
+    .btn { padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; border: none; font-size: 1rem; }
+    .btn-primary { background: #2c5282; color: #fff; }
+    .btn-primary:hover { background: #2a4365; }
+    .msg { padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; }
+    .msg.success { background: #c6f6d5; color: #22543d; }
+    .msg.error { background: #fed7d7; color: #742a2a; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>Borrow a book</h2>
+
+{% if success %}
+<p class="msg success">Book borrowed successfully. Due date: {{ due_date }}.</p>
+{% endif %}
+{% if error %}
+<p class="msg error">{{ error }}</p>
+{% endif %}
+
+<form method="post" action="{{ request.url_for('borrow_submit') }}">
+    <div class="form-group">
+        <label for="book_id">Book *</label>
+        <select id="book_id" name="book_id" required>
+            <option value="">— Select a book —</option>
+            {% for book in books %}
+            <option value="{{ book.id }}" {{ 'selected' if selected_book_id and (selected_book_id | string) == (book.id | string) else '' }}>
+                {{ book.title }} — {{ book.author }}{% if book.available_copies is defined %} ({{ book.available_copies }} available){% endif %}
+            </option>
+            {% endfor %}
+        </select>
+        {% if not books %}
+        <span class="error">No books available to borrow. Add books or wait for returns.</span>
+        {% endif %}
+    </div>
+    <div class="form-group">
+        <label for="member_id">Member *</label>
+        <select id="member_id" name="member_id" required>
+            <option value="">— Select a member —</option>
+            {% for member in members %}
+            <option value="{{ member.id }}" {{ 'selected' if selected_member_id and (selected_member_id | string) == (member.id | string) else '' }}>
+                {{ member.full_name }} ({{ member.email }})
+            </option>
+            {% endfor %}
+        </select>
+        {% if not members %}
+        <span class="error">No active members. Add members first.</span>
+        {% endif %}
+    </div>
+    <div class="form-group">
+        <label for="loan_days">Loan period (days) *</label>
+        <input type="number" id="loan_days" name="loan_days" value="{{ loan_days | default(14) }}" min="1" max="365" required>
+    </div>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Borrow</button>
+    </div>
+</form>
+{% endblock %}

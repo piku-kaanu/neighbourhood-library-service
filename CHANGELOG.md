@@ -71,3 +71,12 @@ to Semantic Versioning.
 ### Added
 
 - Added role based authentication.
+
+------------------------------------------------------------------------
+
+## \[1.1.1\] - 2026-02-16
+
+### Added
+
+- Resolved password setting issues.
+- Added change password flow.

@@ -75,7 +75,7 @@ def get_current_user_required(
     """Load current user; redirect to login if not logged in. Returns User or RedirectResponse."""
     user = get_current_user(request, db)
     if user is None:
-        return RedirectResponse(url=str(request.url_for("login")), status_code=302)
+        return RedirectResponse(url=str(request.url_for("login_page")), status_code=302)
     return user
 
 

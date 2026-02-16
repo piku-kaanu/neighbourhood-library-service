@@ -31,6 +31,7 @@
                 {% else %}
                 <a href="{{ request.url_for('my_borrows') }}">My borrows</a>
                 {% endif %}
+                <a href="{{ request.url_for('change_password_page') }}">Change password</a>
                 <form method="post" action="{{ request.url_for('logout') }}" style="display:inline;">
                     <button type="submit" style="background:none;border:none;color:#bee3f8;cursor:pointer;font-size:1rem;">Logout ({{ request.state.user.username }})</button>
                 </form>

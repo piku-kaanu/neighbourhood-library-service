@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Neighborhood Library{% endblock %}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: system-ui, sans-serif; line-height: 1.5; color: #1a1a1a; }
+        .header { background: #2c5282; color: #fff; padding: 1rem 2rem; }
+        .header h1 { margin: 0; font-size: 1.5rem; }
+        .header nav { margin-top: 0.5rem; }
+        .header a { color: #bee3f8; text-decoration: none; margin-right: 1rem; }
+        .header a:hover { text-decoration: underline; }
+        .main { max-width: 56rem; margin: 0 auto; padding: 2rem; min-height: 60vh; }
+        .footer { background: #edf2f7; padding: 1rem 2rem; text-align: center; color: #4a5568; font-size: 0.875rem; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header class="header">
+        <h1>Neighborhood Library</h1>
+        <nav>
+            <a href="{{ request.url_for('index') }}">Home</a>
+            <a href="{{ request.url_for('books_list') }}">Books</a>
+        </nav>
+    </header>
+
+    <main class="main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        &copy; Neighborhood Library Service by Parth Kansara
+    </footer>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

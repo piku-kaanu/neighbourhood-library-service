@@ -1,0 +1,71 @@
+{% extends "layout.html" %}
+
+{% block title %}Books — Neighborhood Library{% endblock %}
+
+{% block extra_css %}
+<style>
+    .books-table { width: 100%; border-collapse: collapse; }
+    .books-table th, .books-table td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    .books-table th { background: #f7fafc; font-weight: 600; }
+    .btn-add { display: inline-block; padding: 0.5rem 1rem; background: #2c5282; color: #fff; text-decoration: none; border-radius: 4px; }
+    .btn-add:hover { background: #2a4365; }
+    .filter-form { margin: 1rem 0; padding: 1rem; background: #f7fafc; border-radius: 4px; }
+    .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+    .filter-row label { font-weight: 500; }
+    .filter-row input[type="text"], .filter-row input[type="number"] { padding: 0.35rem 0.5rem; max-width: 10rem; }
+    .filter-row select { padding: 0.35rem 0.5rem; }
+    .btn-filter { padding: 0.35rem 0.75rem; background: #2c5282; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-clear { padding: 0.35rem 0.75rem; color: #4a5568; font-size: 0.875rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>Books</h2>
+<p><a href="{{ request.url_for('book_new') }}" class="btn-add">Add book</a></p>
+
+<form method="get" action="{{ request.url.path }}" class="filter-form">
+    <div class="filter-row">
+        <label for="title">Title</label>
+        <input type="text" id="title" name="title" value="{{ filter_title | default('') }}" placeholder="Search title">
+        <label for="author">Author</label>
+        <input type="text" id="author" name="author" value="{{ filter_author | default('') }}" placeholder="Search author">
+        <label for="year">Year</label>
+        <input type="number" id="year" name="year" value="{{ filter_year | default('') }}" placeholder="Year" min="1" max="9999">
+        <label for="available">Availability</label>
+        <select id="available" name="available">
+            <option value="all" {{ 'selected' if (filter_available | default('all')) == 'all' else '' }}>All</option>
+            <option value="true" {{ 'selected' if (filter_available | default('')) == 'true' else '' }}>Available</option>
+            <option value="false" {{ 'selected' if (filter_available | default('')) == 'false' else '' }}>Not available</option>
+        </select>
+        <button type="submit" class="btn-filter">Filter</button>
+        <a href="{{ request.url.path }}" class="btn-clear">Clear</a>
+    </div>
+</form>
+
+{% if books %}
+<table class="books-table">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Author</th>
+            <th>ISBN</th>
+            <th>Year</th>
+            <th>Available</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for book in books %}
+        <tr>
+            <td>{{ book.title }}</td>
+            <td>{{ book.author }}</td>
+            <td>{{ book.isbn or '—' }}</td>
+            <td>{{ book.published_year or '—' }}</td>
+            <td>{{ book.available_copies }} / {{ book.total_copies }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No books in the library yet.</p>
+{% endif %}
+{% endblock %}

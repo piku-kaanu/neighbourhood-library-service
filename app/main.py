@@ -1,0 +1,61 @@
+# app/main.py
+
+from pathlib import Path
+from typing import Optional
+
+from fastapi import Depends, FastAPI, Form, Query, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
+
+from app.api import books as books_router
+from app.api.books import filter_books_query
+from app.database import get_db
+from app.models.book import Book
+
+app = FastAPI(
+    title="Neighborhood Library Service",
+    description="API for managing books, members, and lending.",
+    version="1.0.0",
+)
+
+templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
+
+app.include_router(books_router.router)
+
+
+@app.get("/", response_class=HTMLResponse)
+def index(request: Request):
+    """Serve the main index page."""
+    return templates.TemplateResponse(request=request, name="index.html")
+
+
+@app.get("/books", response_class=HTMLResponse)
+def books_list(
+    request: Request,
+    db: Session = Depends(get_db),
+    title: Optional[str] = Query(None),
+    author: Optional[str] = Query(None),
+    year: Optional[int] = Query(None),
+    available: Optional[str] = Query(None),
+):
+    """List all books (HTML page) with optional filters."""
+    book_list = filter_books_query(db, title, author, year, available).all()
+    return templates.TemplateResponse(
+        request=request,
+        name="books_list.html",
+        context={
+            "books": book_list,
+            "filter_title": title or "",
+            "filter_author": author or "",
+            "filter_year": year if year is not None else "",
+            "filter_available": available or "all",
+        },
+    )
+
+
+@app.get("/health")
+@app.get("/api/v1/health")
+def healthcheck():
+    """Health check for load balancers and container orchestration."""
+    return {"status": "ok"}
